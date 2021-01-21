@@ -1,0 +1,86 @@
+name: nnels-local-d7
+recipe: drupal7
+
+# Config
+config:
+  webroot: web
+  php: '7.2'
+  via: apache:2.4
+  composer_version: '2.0.8'
+  database: mariadb
+  xdebug: true
+  variables:
+    appserver:
+      php:
+        xdebug.idekey: PHPSTORM
+
+# Services
+services:
+  appserver:
+    type: php
+    # cmd not working; tooling unavailable at this stage
+    # cmd: drush --root=/app/web
+    build_as_root:
+      - pear install File_MARC-stable
+      - pear install Validate_ISPN-alpha
+    build:
+      - composer install
+    overrides:
+      environment:
+        PHP_IDE_CONFIG: "serverName=appserver"
+
+  indexer:
+      type: solr:6.6.6
+      portforward: true
+      core: nnels-drupal
+      # config:
+      #   dir: sites/all/modules/search_api_solr/solr-conf/6.x
+      #   conf: misc/solr6/conf
+      # Workaroudn
+      build:
+        - mkdir -p /opt/solr/server/solr/nnels-drupal/conf
+        - cp -R /app/web/sites/all/modules/search_api_solr/solr-conf/6.x/* /opt/solr/server/solr/nnels-drupal/conf/
+
+  mailcatch:
+      type: mailhog
+      portforward: 1025
+      hogfrom:
+        - appserver
+
+  database:
+    type: mariadb
+    portforward: true
+    creds:
+      user: nnels_rw
+      password: nnels
+      database: nnels_drupal7_local
+
+  dbadmin:
+    type: phpmyadmin
+    hosts: database
+
+  entitycache:
+    type: memcached
+    portforward: true
+
+# Proxies
+proxy:
+  dbadmin:
+    - dbadmin.nnels-local-d7.lndo.site
+  indexer:
+    - indexer.nnels-local-d7.lndo.site
+
+# Tooling
+tooling:
+  drush:
+    service: appserver
+    cmd: drush --root=/app/web
+    env:
+      DRUSH_OPTIONS_URI: nnels-local-d7.lndo.site
+
+# Events
+events:
+  post-start:
+    - appserver: drush en devel -y
+    - appserver: drush dl field_sql_norevisions --dev
+    - appserver: drush en field_sql_norevisions -y
