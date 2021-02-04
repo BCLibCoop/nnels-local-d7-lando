@@ -3,3 +3,4 @@
 *.gz
 web
 vendor
+*.bak
