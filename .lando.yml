@@ -4,42 +4,46 @@ recipe: drupal7
 # Config
 config:
   webroot: web
-  php: '7.2'
+  # php: "7.2"
   via: apache:2.4
-  composer_version: '2.0.8'
+  composer_version: "2.0.8"
   database: mariadb
-  xdebug: true
-  variables:
-    appserver:
-      php:
-        xdebug.idekey: PHPSTORM
 
 # Services
 services:
   appserver:
-    type: php
-    # cmd not working; tooling unavailable at this stage
-    # cmd: drush --root=/app/web
+    type: php:7.2
+    xdebug: "debug,develop"
     build_as_root:
+      - apt-get update
+      - apt-get install mlocate
+      - docker-php-ext-install sockets
       - pear install File_MARC-stable
       - pear install Validate_ISPN-alpha
     build:
       - composer install
+      - mkdir -p ~/.drush/site-aliases
+      - ln -sf /app/drush/nnels-local.aliases.drushrc.php ~/.drush/site-aliases/nnels-local.drushrc.php
+      - drush dl composer_generate
+    run_as_root: updatedb
+
     overrides:
       environment:
         PHP_IDE_CONFIG: "serverName=appserver"
+    config:
+      php: overrides/php.ini
 
   indexer:
       type: solr:6.6.6
       portforward: true
       core: nnels-drupal
-      # config:
-      #   dir: sites/all/modules/search_api_solr/solr-conf/6.x
-      #   conf: misc/solr6/conf
-      # Workaroudn
+      config:
+        dir: sites/all/modules/search_api_solr/solr-conf/6.x/
+      overrides:
+        environment:
+          SOLR_DIR: /opt/solr/server/solr
       build:
-        - mkdir -p /opt/solr/server/solr/nnels-drupal/conf
-        - cp -R /app/web/sites/all/modules/search_api_solr/solr-conf/6.x/* /opt/solr/server/solr/nnels-drupal/conf/
+        - echo "name=$LANDO_SOLR_CORE" > $SOLR_DIR/mycores/$LANDO_SOLR_CORE/core.properties
 
   mailcatch:
       type: mailhog
@@ -65,10 +69,13 @@ services:
 
 # Proxies
 proxy:
+  appserver:
+    - nnels.local
   dbadmin:
-    - dbadmin.nnels-local-d7.lndo.site
-  indexer:
-    - indexer.nnels-local-d7.lndo.site
+    - dbadmin.nnels.local
+  # Not working
+  # indexer:
+  #   - indexer.nnels.local
 
 # Tooling
 tooling:
@@ -76,11 +83,13 @@ tooling:
     service: appserver
     cmd: drush --root=/app/web
     env:
-      DRUSH_OPTIONS_URI: nnels-local-d7.lndo.site
+      DRUSH_OPTIONS_URI: nnels.local
 
 # Events
 events:
-  post-start:
+  post-db-import:
+    - appserver: drush cc all
+  post-rebuild:
     - appserver: drush en devel -y
     - appserver: drush dl field_sql_norevisions --dev
     - appserver: drush en field_sql_norevisions -y
