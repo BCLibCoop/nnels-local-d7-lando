@@ -38,12 +38,13 @@ services:
       portforward: true
       core: nnels-drupal
       config:
-        dir: sites/all/modules/search_api_solr/solr-conf/6.x/
+        conf: sites/all/modules/search_api_solr/solr-conf/6.x/
       overrides:
         environment:
           SOLR_DIR: /opt/solr/server/solr
       build:
         - echo "name=$LANDO_SOLR_CORE" > $SOLR_DIR/mycores/$LANDO_SOLR_CORE/core.properties
+        - cp -R /app/web/sites/all/modules/search_api_solr/solr-conf/6.x/ $SOLR_DIR/mycores/$LANDO_SOLR_CORE/conf/
 
   mailcatch:
       type: mailhog
