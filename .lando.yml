@@ -13,7 +13,7 @@ config:
 services:
   appserver:
     type: php:7.2
-    xdebug: "debug,develop"
+    # xdebug: "debug,develop"
     build_as_root:
       - apt-get update
       - apt-get install mlocate
@@ -24,8 +24,8 @@ services:
       - composer install
       - mkdir -p ~/.drush/site-aliases
       - ln -sf /app/drush/nnels-local.aliases.drushrc.php ~/.drush/site-aliases/nnels-local.drushrc.php
-      - drush dl composer_generate
-    run_as_root: updatedb
+      # - drush dl composer_generate
+    # run_as_root: updatedb
 
     overrides:
       environment:
@@ -69,14 +69,14 @@ services:
     portforward: true
 
 # Proxies
-proxy:
-  appserver:
-    - nnels.local
-  dbadmin:
-    - dbadmin.nnels.local
-  # Not working
-  # indexer:
-  #   - indexer.nnels.local
+# proxy:
+#   appserver:
+#     - nnels.local
+#   dbadmin:
+#     - dbadmin.nnels.local
+#   # Not working
+#   # indexer:
+#   #   - indexer.nnels.local
 
 # Tooling
 tooling:
@@ -91,6 +91,6 @@ events:
   post-db-import:
     - appserver: drush cc all
   post-rebuild:
-    - appserver: drush en devel -y
-    - appserver: drush dl field_sql_norevisions --dev
-    - appserver: drush en field_sql_norevisions -y
+    - appserver: drush --root=/app/web en devel -y
+    - appserver: drush --root=/app/web dl field_sql_norevisions --dev
+    - appserver: drush --root=/app/web en field_sql_norevisions -y
