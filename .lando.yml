@@ -26,7 +26,6 @@ services:
       - ln -sf /app/drush/nnels-local.aliases.drushrc.php ~/.drush/site-aliases/nnels-local.drushrc.php
       # - drush dl composer_generate
     # run_as_root: updatedb
-
     overrides:
       environment:
         PHP_IDE_CONFIG: "serverName=appserver"
@@ -35,7 +34,7 @@ services:
 
   indexer:
       type: solr:6.6.6
-      portforward: true
+      # portforward: true
       core: nnels-drupal
       config:
         conf: sites/all/modules/search_api_solr/solr-conf/6.x/
@@ -44,17 +43,17 @@ services:
           SOLR_DIR: /opt/solr/server/solr
       build:
         - echo "name=$LANDO_SOLR_CORE" > $SOLR_DIR/mycores/$LANDO_SOLR_CORE/core.properties
-        - cp -R /app/web/sites/all/modules/search_api_solr/solr-conf/6.x/ $SOLR_DIR/mycores/$LANDO_SOLR_CORE/conf/
+        - cp -r /app/web/sites/all/modules/search_api_solr/solr-conf/6.x/. $SOLR_DIR/mycores/$LANDO_SOLR_CORE/conf/
 
   mailcatch:
       type: mailhog
-      portforward: 1025
+      # portforward: 1025
       hogfrom:
         - appserver
 
   database:
     type: mariadb
-    portforward: true
+    # portforward: true
     creds:
       user: nnels_rw
       password: nnels
