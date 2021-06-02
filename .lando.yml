@@ -4,7 +4,6 @@ recipe: drupal7
 # Config
 config:
   webroot: web
-  # php: "7.2"
   via: apache:2.4
   composer_version: "2.0.8"
   database: mariadb
@@ -13,7 +12,7 @@ config:
 services:
   appserver:
     type: php:7.2
-    xdebug: "debug,develop"
+    # xdebug: "debug,develop"
     build_as_root:
       - apt-get update
       - apt-get install mlocate
@@ -24,9 +23,6 @@ services:
       - composer install
       - mkdir -p ~/.drush/site-aliases
       - ln -sf /app/drush/nnels-local.aliases.drushrc.php ~/.drush/site-aliases/nnels-local.drushrc.php
-      - drush dl composer_generate
-    run_as_root: updatedb
-
     overrides:
       environment:
         PHP_IDE_CONFIG: "serverName=appserver"
@@ -35,7 +31,6 @@ services:
 
   indexer:
       type: solr:6.6.6
-      portforward: true
       core: nnels-drupal
       config:
         conf: sites/all/modules/search_api_solr/solr-conf/6.x/
@@ -44,17 +39,16 @@ services:
           SOLR_DIR: /opt/solr/server/solr
       build:
         - echo "name=$LANDO_SOLR_CORE" > $SOLR_DIR/mycores/$LANDO_SOLR_CORE/core.properties
-        - cp -R /app/web/sites/all/modules/search_api_solr/solr-conf/6.x/ $SOLR_DIR/mycores/$LANDO_SOLR_CORE/conf/
+        - cp -r /app/web/sites/all/modules/search_api_solr/solr-conf/6.x/. $SOLR_DIR/mycores/$LANDO_SOLR_CORE/conf/
 
   mailcatch:
-      type: mailhog
-      portforward: 1025
-      hogfrom:
-        - appserver
+    type: mailhog
+    portforward: 1025
+    hogfrom:
+      - appserver
 
   database:
     type: mariadb
-    portforward: true
     creds:
       user: nnels_rw
       password: nnels
@@ -69,14 +63,15 @@ services:
     portforward: true
 
 # Proxies
+# NB: Add these entries to your /etc/hosts file.
 proxy:
   appserver:
-    - nnels.local
-  dbadmin:
-    - dbadmin.nnels.local
-  # Not working
-  # indexer:
-  #   - indexer.nnels.local
+     - nnels.local
+   dbadmin:
+     - dbadmin.nnels.local
+   # Not working
+   # indexer:
+   #   - indexer.nnels.local
 
 # Tooling
 tooling:
@@ -91,6 +86,6 @@ events:
   post-db-import:
     - appserver: drush cc all
   post-rebuild:
-    - appserver: drush en devel -y
-    - appserver: drush dl field_sql_norevisions --dev
-    - appserver: drush en field_sql_norevisions -y
+    - appserver: drush --root=/app/web en devel -y
+    - appserver: drush --root=/app/web dl field_sql_norevisions --dev
+    - appserver: drush --root=/app/web en field_sql_norevisions -y
